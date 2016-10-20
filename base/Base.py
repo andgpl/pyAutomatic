@@ -1,18 +1,18 @@
 #! /usr/bin/python3
 import inspect
 
-from BaseInfo import Info
 from operator import attrgetter
 
 
 
 
-class Base():
 
-    def __init__(self, id_, name, desc):
+class Base:
+
+    def __init__(self, id_, desc):
 
         self.id   = id_
-        self.name = name
+        self.name = self.__class__.__name__
         self.desc = desc
 
 
@@ -29,8 +29,10 @@ class Base():
 
 
 
+
     def getInfo(self):
-        return Info(self, [child.getInfo() for child in self._children])
+        import Info
+        return Info.Info(self, [child.getInfo() for child in self._children])
         
         
     def run(self):

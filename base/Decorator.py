@@ -155,21 +155,27 @@ class Decorator(metaclass = DecoratorMeta):
 
     def _inheritFromBaseClass(self):
         
-        id_    = self._id
-        args   = self._baseClassArgs
-        kwArgs = self._baseClassKWargs
+
         
+                                    
         
-        def init(self):
-            super(self.__class__, self).__init__(id_, *args, **kwArgs)
-        
-                                            
         name    = self._wrappedObject.__name__
-        clsDict = {"__init__" : init}
+        clsDict = {}
         bases   = (self._baseClass,)
                 
         
         if inspect.isclass(self._wrappedObject):
+
+            id_     = self._id
+            args    = self._baseClassArgs
+            kwArgs  = self._baseClassKWargs
+            baseCls = self._baseClass
+            
+
+            def init(self):
+                super(baseCls, self).__init__(id_, *args, **kwArgs)
+
+            clsDict['__init__'] = init
             bases = (self._wrappedObject,) + bases
             
             
@@ -182,11 +188,11 @@ class Decorator(metaclass = DecoratorMeta):
             # a function. TODO: raise exception
             pass
             
-            
+
 
         cls = type(name, bases, clsDict)
         if inspect.isfunction(self._wrappedObject):
-            return cls()
+            return cls(self._id, *self._baseClassArgs, **self._baseClassKWargs)
         else:
             return cls        
 
