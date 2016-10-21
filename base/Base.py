@@ -31,8 +31,8 @@ class Base:
 
 
     def getInfo(self):
-        import Info
-        return Info.Info(self, [child.getInfo() for child in self._children])
+        from Info import Info
+        return Info(self, [child.getInfo() for child in self._children])
         
         
     def run(self):

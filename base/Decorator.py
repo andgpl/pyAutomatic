@@ -66,9 +66,9 @@ class Decorator(metaclass = DecoratorMeta):
 
 
     def __new__(cls, *args, **kwargs):
-   
+
         obj = super(Decorator, cls).__new__(cls)
-    
+        
         if (len(args) > 0) and\
                       (inspect.isclass(args[0]) or inspect.isfunction(args[0])):
 
@@ -155,32 +155,28 @@ class Decorator(metaclass = DecoratorMeta):
 
     def _inheritFromBaseClass(self):
         
+    
+    
+        id_     = self._id
+        args    = self._baseClassArgs
+        kwArgs  = self._baseClassKWargs
 
-        
+        base = self._baseClass
+        def init(self):
+            super(self.__class__, self).__init__(id_, *args, **kwArgs)
                                     
         
         name    = self._wrappedObject.__name__
-        clsDict = {}
         bases   = (self._baseClass,)
+        clsDict = {"__init__" : init}
                 
         
         if inspect.isclass(self._wrappedObject):
-
-            id_     = self._id
-            args    = self._baseClassArgs
-            kwArgs  = self._baseClassKWargs
-            baseCls = self._baseClass
-            
-
-            def init(self):
-                super(baseCls, self).__init__(id_, *args, **kwArgs)
-
-            clsDict['__init__'] = init
             bases = (self._wrappedObject,) + bases
             
             
         elif inspect.isfunction(self._wrappedObject):
-            clsDict[name] = self._wrappedObject
+            clsDict[name] = staticmethod(self._wrappedObject)
             
             
         else:
@@ -192,7 +188,7 @@ class Decorator(metaclass = DecoratorMeta):
 
         cls = type(name, bases, clsDict)
         if inspect.isfunction(self._wrappedObject):
-            return cls(self._id, *self._baseClassArgs, **self._baseClassKWargs)
+            return cls()
         else:
             return cls        
 
@@ -276,8 +272,8 @@ if __name__ == "__main__":
     #------ Wrapping a function -------
 
     @TestSuite("Hallo Welt")
-    def testFunc(self):
-        print("inside testFunc. My id is:", self.id)
+    def testFunc():
+        print("inside testFunc.")
         
         
     testFunc.testFunc()
