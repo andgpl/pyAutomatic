@@ -61,3 +61,4 @@ if __name__ == "__main__":
 
     suite = MySuite()
     suite.run()
+    print(suite.getInfo())

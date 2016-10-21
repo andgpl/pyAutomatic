@@ -206,7 +206,7 @@ class Decorator(metaclass = DecoratorMeta):
         
 
 
-    __ID__ = 1
+    __ID__ = 0
     @staticmethod
     def getID():
         Decorator.__ID__ += 1

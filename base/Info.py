@@ -1,5 +1,8 @@
 #! /usr/bin/python3
+import textwrap
+
 from Base import Base
+
 
 
 class Info:
@@ -21,4 +24,8 @@ class Info:
         
     def __str__(self):
     
-        return '{}({}) : {}'.format(self.name, self.id, self.description)
+        r = '{}({}) : {}'.format(self.name, self.id, self.description)
+        for child in self.children:
+            r += '\n' + textwrap.indent(str(child), '    ')
+            
+        return r
