@@ -1,8 +1,8 @@
 #! /usr/bin/python3
 import inspect
 
-from Base       import Base
-from Decorator  import Decorator
+from Base      import Base
+from Decorator import Decorator
 
 
 
