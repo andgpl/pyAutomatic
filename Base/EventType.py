@@ -1,10 +1,9 @@
 #! /usr/bin/python3
 
-from enum import IntEnum, unique
+from Base.Enumeration import Enumeration
 
 
-@unique
-class EventType(IntEnum):
+class EventType(Enumeration):
 
     """
     General Events

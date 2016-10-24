@@ -1,7 +1,7 @@
 #! /usr/bin/python3
 import time
 
-from EventType import EventType
+from Base.EventType import EventType
 
 
 
