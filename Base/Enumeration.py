@@ -1,5 +1,6 @@
 #! /usr/bin/python3
 import collections
+import inspect
 import operator
 
 
@@ -122,6 +123,7 @@ class EnumMeta(type):
 
             if bases != ():
                 setattr(cls, ENUM_VALUES, [])
+
             
 
         # Parse class members into EnumValues.
@@ -145,18 +147,28 @@ class EnumMeta(type):
                 raise ValueError(ENUM_ERROR_VALUE.format(str(value),
                                                                 cls.__name__))
 
+
+            if isinstance(value, EnumValue) and value.value in cls.__EnumValues:
+                raise ValueError(ENUM_ERROR_VALUE.format(str(value),
+                                                                cls.__name__))
+
+
             # Replace orignal value with EnumValue instance
             cls.__EnumValues__.append(value)
             setattr(cls, name, EnumValue(name, value, cls))
             
-            
+
+
+
+
         # Disallow class modification after initialisation
         delattr(cls, ENUM_INIT_STATE)
 
 
     # EnumValues are considered instances of their Enumeration
-    def __instancecheck__(cls, other):
-        return isinstance(other, EnumValue) and issubclass(other._enumCls, cls)
+    def __instancecheck__(cls, ev):
+        return isinstance(ev, EnumValue) and\
+               ((ev._enumCls == cls) or issubclass(cls, ev._enumCls))
 
 
     # Enumerations cannot be instanciated
@@ -181,6 +193,17 @@ class EnumMeta(type):
             raise NotImplementedError(ENUM_ERROR_DELETE)
        
 
+
+    # String functions
+    def __str__(cls):
+        
+        r = cls.__name__ + '\n' + ('-' * len(cls.__name__))
+
+        for name, value in inspect.getmembers(cls):
+            if isinstance(value, EnumValue):
+                r += '\n' + str(value)
+
+        return r
 
 
 
