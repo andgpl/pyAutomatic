@@ -1,6 +1,5 @@
 #! /usr/bin/python3
 import collections
-import inspect
 import operator
 
 
@@ -18,7 +17,11 @@ ENUM_INIT_STATE = "__InitInProgress__"
 ENUM_ERROR_ASSIGN = "Enumeration does not allow assignment"
 ENUM_ERROR_DELETE = "Enumeration does not allow deletion"
 ENUM_ERROR_TYPE   = "Values of {} must be of type '{}' but '{}' was found"
-ENUM_ERROR_VALUE  = "Value '{}' already exists in {}"
+ENUM_ERROR_VALUE  = "Value '{}'({}) already exists in {} ({})"
+ENUM_ERROR_BASE   = ("Enumeration can only inherit from other Enumeration "
+                     "class or subclass. '{}' is not an Enumeration.")
+ENUM_ERROR_BASE_TYPE = ("Enumeration base classes must have the same base type."
+                        " Type '{}' conflicts with '{}'.")
 
 
 
@@ -29,48 +32,29 @@ class EnumValue:
         # Allow attribute assignment during initialisation
         object.__setattr__(self, ENUM_INIT_STATE, True)
     
-        self.name  = name
-        self.value = value
     
         # private
         self._basetype = enumCls.__EnumBaseType__
         self._enumCls  = enumCls
+    
+    
+        # value must be instance of basetype
+        if not isinstance(value, self._basetype):
+            raise TypeError(ENUM_ERROR_TYPE.format(enumCls.__name__,
+                                                   self._basetype.__name__,
+                                                   type(value).__name__))
+    
+        self.name  = name        
+        self.value = value
+    
         
         
         delattr(self, ENUM_INIT_STATE)
 
-
+    # Representations
     def __str__(self):
         return "{}.{} : {}".format(self._enumCls.__name__,
                                                     self.name, self.value)
-
-    def __eq__(self, o):
-        return self._compare(operator.eq, o)
-
-    def __lt__(self, o):
-        return self._compare(operator.lt, o)
-
-    def __le__(self, o):
-        return self._compare(operator.le, o)
-
-    def __gt__(self, o):
-        return self._compare(operator.gt, o)
-
-    def __ge__(self, o):
-        return self._compare(operator.ge, o)
-
-
-    def _compare(self, op, o):
-    
-        if isinstance(o, self._basetype) and op(self.value, o):
-            return True
-            
-        elif isinstance(o, EnumValue) and (self._basetype == o._basetype) and\
-             op(self.value, o.value):
-             return True
-             
-        else:
-            return False
 
 
     # EnumValues are immutable
@@ -86,6 +70,49 @@ class EnumValue:
             object.__delattr__(self, name)
         else:
             raise NotImplementedError(ENUM_ERROR_DELETE)
+
+
+
+
+
+
+class EnumValueIndex:
+
+    def __init__(self, cls):
+        self._clsName = cls.__name__
+        self._values  = collections.OrderedDict()
+        self._names   = {}
+
+
+    def append(self, ev):
+    
+        # Enumeration values must be unique
+        if ev.value in self._values:
+            raise ValueError(ENUM_ERROR_VALUE.format(str(ev.value), ev,
+                                                     self._clsName,
+                                                     self._values[ev.value]))
+
+        self._values[ev.value] = ev
+        if ev.name in self._names:
+            del self._values[self._names[ev.name]]
+        self._names[ev.name] = ev.value
+        
+       
+    def update(self, *indeces):
+        for index in indeces:
+            for ev in index.list():
+                self.append(ev)
+           
+        
+    def list(self):
+        return list(self._values.values())
+
+        
+    def items(self):
+        return self._values.items()
+
+
+
 
 
 
@@ -118,44 +145,62 @@ class EnumMeta(type):
         # Enumeration is created (see above). When inherting from an
         # Enumeration class the basetype type of the parent Enumeration is
         # used, A possible basetype argument is ignored.
+        #
+        # __EnumValues__ holds the actual values of the enum. It is used to
+        # detect multiple occurences of the same value
         if (bases == ()) or (bases == (Enumeration,)):
             setattr(cls, ENUM_BASE_TYPE, basetype)
 
             if bases != ():
-                setattr(cls, ENUM_VALUES, [])
+                # This is a new enumeration internal enum value list is empty...
+                setattr(cls, ENUM_VALUES, EnumValueIndex(cls))
 
+
+        else:
+            # This is an enumeration that inherits from other classes...
             
+            
+            # Enumeration can only inherit from other enumerations
+            for ib in filter(lambda b: not issubclass(b, Enumeration), bases):
+                raise TypeError(ENUM_ERROR_BASE.format(ib.__name__))
+            
+            
+            # Base enumeration classes must have the same base type
+            baseTypes = map(lambda b: b.__EnumBaseType__, bases)
+            mainBt = next(baseTypes)
+            for bt in baseTypes:
+                if bt != mainBt:
+                    raise TypeError(ENUM_ERROR_BASE_TYPE.format(mainBt.__name__,
+                                                                bt.__name__))
+                
+            
+            
+            # Create new enum value index from base indeces
+            baseIndeces = list(map(lambda b: b.__EnumValues__, bases))
+            newIndex = EnumValueIndex(cls)
+            newIndex.update(*baseIndeces)
+            setattr(cls, ENUM_VALUES, newIndex)
+        
+
+
 
         # Parse class members into EnumValues.
         # - Allow only values of type __EnumBaseType__
         # - Allow only unique names
         # - Allow only unique values
-        for name, value in namespace.items():       
+        for name, value in namespace.items():
             if name.startswith('_'):
                 continue
 
-
-            # Value must be instance of basetype
-            if not isinstance(value, cls.__EnumBaseType__):
-                raise TypeError(ENUM_ERROR_TYPE.format(cls.__name__,
-                                                  cls.__EnumBaseType__.__name__,
-                                                  type(value).__name__))
-
-
-            # Value must be unique
-            if value in cls.__EnumValues__:
-                raise ValueError(ENUM_ERROR_VALUE.format(str(value),
-                                                                cls.__name__))
-
-
-            if isinstance(value, EnumValue) and value.value in cls.__EnumValues:
-                raise ValueError(ENUM_ERROR_VALUE.format(str(value),
-                                                                cls.__name__))
+            # Values can also be copied from other enumeration values
+            if isinstance(value, EnumValue):
+                value = value.value
 
 
             # Replace orignal value with EnumValue instance
-            cls.__EnumValues__.append(value)
-            setattr(cls, name, EnumValue(name, value, cls))
+            ev = EnumValue(name, value, cls)
+            cls.__EnumValues__.append(ev)
+            setattr(cls, name, ev)
             
 
 
@@ -199,9 +244,8 @@ class EnumMeta(type):
         
         r = cls.__name__ + '\n' + ('-' * len(cls.__name__))
 
-        for name, value in inspect.getmembers(cls):
-            if isinstance(value, EnumValue):
-                r += '\n' + str(value)
+        for ev in cls.__EnumValues__.list():
+            r += '\n' + str(ev)
 
         return r
 

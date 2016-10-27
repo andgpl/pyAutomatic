@@ -28,7 +28,6 @@ class EndTypes(Enumeration):
     TESTSTEP_END  = 30
     TESTCASE_END  = 31
     TESTSUITE_END = 32
-    TEST = 14
 
 
 class ResultTypes(Enumeration):
@@ -42,18 +41,17 @@ class ResultTypes(Enumeration):
     TESTSUITE_FAIL        = 46
 
 
-
 class EventType(AssertTypes, StartTypes, EndTypes, ResultTypes):
     pass
 
 
 
-
 if __name__ == "__main__":
 
-    print(AssertTypes)
+    print()
     print(EventType)
-    print(EventType.TEST == EventType.ASSERT_PASS)
-    print(isinstance(EventType.TEST, EventType))
-    print(isinstance(EventType.TEST, EndTypes))
+    print(AssertTypes.INFO == EventType.INFO)
+    print(isinstance(AssertTypes.INFO, EventType))
+    print(float(AssertTypes.WARNING))
+    print(AssertTypes.INFO - 20)
 
