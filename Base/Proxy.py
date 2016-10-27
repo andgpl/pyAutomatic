@@ -2,7 +2,7 @@
 """
 See: http://code.activestate.com/recipes/496741-object-proxying/
 """
-import operator
+import inspect
 
 
 _computeNames = [
@@ -88,24 +88,22 @@ _specialNames = _computeNames + _compareNames + _convertNames +\
                 _containerAccessNames
 
 
-class CustomProxy:
 
-    _typeCache = {}
-    
-    
-    def __new__(cls, obj):    
-        return super(CustomProxy, cls).__new__(cls)
-    
+class ProxyMeta(type):
 
-    def __init__(self, obj):
-        self._obj = obj
+    def __init__(cls, name, bases, namespace, basetype = int, objName = "hoho"):
+        cls.basetype = basetype
+        setattr(cls, objname, basetype())
         
 
-        for name in dir(obj):
-            setattr(self, name)
+class CustomProxy(metaclass = ProxyMeta):  
+    pass
+
+
 
     
 
 if __name__ == "__main__":
     
-    pass
+    print(dir(CustomProxy()))
+    print(int())
