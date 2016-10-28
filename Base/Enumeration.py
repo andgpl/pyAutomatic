@@ -2,7 +2,7 @@
 import collections
 import operator
 
-
+from Base.Proxy import Proxy
 
 """
 Constants
@@ -10,6 +10,7 @@ Constants
 ENUM_DEFAULT_TYPE = int
 
 ENUM_BASE_TYPE  = "__EnumBaseType__"
+ENUM_VALUE_CLS  = "__EnumValueClass__"
 ENUM_VALUES     = "__EnumValues__"
 
 ENUM_INIT_STATE = "__InitInProgress__"
@@ -25,54 +26,53 @@ ENUM_ERROR_BASE_TYPE = ("Enumeration base classes must have the same base type."
 
 
 
-class EnumValue:
+def createEnumValueClass(basetype):
 
-    def __init__(self, name, value, enumCls):
-    
-        # Allow attribute assignment during initialisation
-        object.__setattr__(self, ENUM_INIT_STATE, True)
-    
-    
-        # private
-        self._basetype = enumCls.__EnumBaseType__
-        self._enumCls  = enumCls
-    
-    
-        # value must be instance of basetype
-        if not isinstance(value, self._basetype):
-            raise TypeError(ENUM_ERROR_TYPE.format(enumCls.__name__,
-                                                   self._basetype.__name__,
-                                                   type(value).__name__))
-    
-        self.name  = name        
-        self.value = value
-    
+    class EnumValue(Proxy, basetype = basetype, immutable = True):
+
+        def __init__(self, name, value, enumCls):
+        
+      
+            # Allow attribute assignment during initialisation
+            object.__setattr__(self, ENUM_INIT_STATE, True)
+
+
+            super(EnumValue, self).__init__(value)  
+            
+            # Private
+            self._enumCls  = enumCls      
+            self._enumName = enumCls.__name__
+            
+            # Public
+            self.name      = name
+            self.value     = self._obj
+            
+           
+            # Denie write access
+            delattr(self, ENUM_INIT_STATE)
+
+
+        # Representations
+        def __str__(self):
+            return "{}.{} : {}".format(self._enumName, self.name, self.value)
+
+
+        # EnumValues are immutable
+        def __setattr__(self, name, value):
+            if hasattr(self, ENUM_INIT_STATE):
+                object.__setattr__(self, name, value)
+            else:
+                raise NotImplementedError(ENUM_ERROR_ASSIGN)
         
         
-        delattr(self, ENUM_INIT_STATE)
+        def __delattr__(self, name):
+            if hasattr(self, ENUM_INIT_STATE):
+                object.__delattr__(self, name)
+            else:
+                raise NotImplementedError(ENUM_ERROR_DELETE)
 
-    # Representations
-    def __str__(self):
-        return "{}.{} : {}".format(self._enumCls.__name__,
-                                                    self.name, self.value)
-
-
-    # EnumValues are immutable
-    def __setattr__(self, name, value):
-        if hasattr(self, ENUM_INIT_STATE):
-            object.__setattr__(self, name, value)
-        else:
-            raise NotImplementedError(ENUM_ERROR_ASSIGN)
-    
-    
-    def __delattr__(self, name):
-        if hasattr(self, ENUM_INIT_STATE):
-            object.__delattr__(self, name)
-        else:
-            raise NotImplementedError(ENUM_ERROR_DELETE)
-
-
-
+    # Done
+    return EnumValue
 
 
 
@@ -148,8 +148,12 @@ class EnumMeta(type):
         #
         # __EnumValues__ holds the actual values of the enum. It is used to
         # detect multiple occurences of the same value
+        #
+        # __EnumValueClass__ holds the type specific class for this enum
+        #
         if (bases == ()) or (bases == (Enumeration,)):
             setattr(cls, ENUM_BASE_TYPE, basetype)
+            setattr(cls, ENUM_VALUE_CLS, createEnumValueClass(basetype))
 
             if bases != ():
                 # This is a new enumeration internal enum value list is empty...
@@ -193,12 +197,12 @@ class EnumMeta(type):
                 continue
 
             # Values can also be copied from other enumeration values
-            if isinstance(value, EnumValue):
-                value = value.value
+            #if isinstance(value, EnumValue):
+            #    value = value.value
 
 
             # Replace orignal value with EnumValue instance
-            ev = EnumValue(name, value, cls)
+            ev = cls.__EnumValueClass__(name, value, cls)
             cls.__EnumValues__.append(ev)
             setattr(cls, name, ev)
             
@@ -212,7 +216,7 @@ class EnumMeta(type):
 
     # EnumValues are considered instances of their Enumeration
     def __instancecheck__(cls, ev):
-        return isinstance(ev, EnumValue) and\
+        return isinstance(ev, cls.__EnumValueClass__) and\
                ((ev._enumCls == cls) or issubclass(cls, ev._enumCls))
 
 

@@ -45,6 +45,10 @@ class EventType(AssertTypes, StartTypes, EndTypes, ResultTypes):
     pass
 
 
+class ListEnum(Enumeration, basetype = tuple):
+
+    VAL = [1, 2, 3]
+
 
 if __name__ == "__main__":
 
@@ -53,5 +57,7 @@ if __name__ == "__main__":
     print(AssertTypes.INFO == EventType.INFO)
     print(isinstance(AssertTypes.INFO, EventType))
     print(float(AssertTypes.WARNING))
-    print(AssertTypes.INFO - 20)
+    print(30 - AssertTypes.INFO)
+    
+    print(ListEnum.VAL)
 
